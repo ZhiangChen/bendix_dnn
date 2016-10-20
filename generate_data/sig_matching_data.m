@@ -38,7 +38,7 @@ function simulation = sig_matching_data(example_num, display_figures)
   std_acc_lat = 1; % lateral acceleration noise
   
   %perception noise
-  std_fwd_pos_sensor_noise = 0.5 % std forward/following position sensor, in meters
+  std_fwd_pos_sensor_noise = 0.2 % std forward/following position sensor, in meters <<<<<<<<<<<<<<<<<<<<***************** 0.2 << 0.5
   std_lat_pos_sensor_noise = 0.5 % sensor noise for lateral position, in meters
   std_vel_sensor_noise = 1 % std m/sec vel sensor noise
   std_width_sensor_noise = 0.25 %std of width sensor, in meters

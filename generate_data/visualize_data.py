@@ -12,9 +12,9 @@ class Visualizer:
 	
 	def feed(self,data,dt):
 		self.data = data
-		self.nm = data.shape[1]
-		self.t = [dt*i for i in range(self.nm)]
-		self.length = data.shape[0]
+		self.length = data.shape[1]
+		self.t = [dt*i for i in range(self.length)]
+		self.nm = data.shape[0]
 
 	def rshow(self):
 		index = np.random.randint(self.nm)
@@ -26,7 +26,7 @@ class Visualizer:
 		plt.show()		
 
 if __name__ == '__main__':
-	pos_data, neg_data, dt = Simulator().get_data(2)
+	pos_data, neg_data, dt = Simulator().get_data(1)
 	vs = Visualizer()
 	vs.feed(neg_data,dt)
 	vs.rshow()

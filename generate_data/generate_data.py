@@ -26,9 +26,10 @@ class Simulator:
 			snippet = octave.match_sigs_create_training_snippets(self.display_figures)
 			pos_data.append(snippet['good_example'])
 			neg_data.append(snippet['bad_example'])
-
-		self.pos_data = np.asarray(pos_data).reshape((-1,125))
-		self.neg_data = np.asarray(neg_data).reshape((-1,125))
+		
+		length = snippet['bad_example'].shape[1]
+		self.pos_data = np.asarray(pos_data).reshape((-1,length))
+		self.neg_data = np.asarray(neg_data).reshape((-1,length))
 		self.dt = sim1['dt']
 		return self.pos_data, self.neg_data, self.dt
 

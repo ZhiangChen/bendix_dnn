@@ -7,8 +7,8 @@ load radar_vals_2;
 load radar_vals_3;
 load radar_vals_4;
 
-Npts_old = 100;
-Npts_new=25;
+Npts_old = 20;
+Npts_new= 5;
 sample_length = Npts_old+Npts_new;
 N_good_examples = 100;
 N_bad_examples = 100;
@@ -30,6 +30,7 @@ for i_example_good=1:25
 	matrix_good_examples = [matrix_good_examples;radar_vals_4(nstart:nstart+sample_length-1,1)'];
 end
 [n_good_examples,n_samps_training] = size(matrix_good_examples)
+
 %now lets make some bad data:
 for i_example_good=1:25
 	nstart = randi(nsamps - Npts_old);
