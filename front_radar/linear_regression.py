@@ -70,8 +70,8 @@ with graph.as_default():
 	biases = tf.Variable(tf.zeros([1]))
 
 	def model(data):
-		logits = tf.matmul(data, weights) + biases
-		return tf.sigmoid(logits)
+		linear = tf.matmul(data, weights) + biases
+		return linear
 
 	train_prediction = model(tf_train_dataset)
 	loss = tf.reduce_mean(tf.square(tf_train_labels - train_prediction))
@@ -80,7 +80,7 @@ with graph.as_default():
 	valid_prediction = model(tf_valid_dataset)
  	test_prediction = model(tf_test_dataset)
 
-nm_steps = 10
+nm_steps = 1000
 with tf.Session(graph=graph) as session:
  	tf.initialize_all_variables().run()
  	print('Initialized')
@@ -90,7 +90,7 @@ with tf.Session(graph=graph) as session:
  		batch_labels = train_labels[offset:(offset + batch_size), :]
  		feed_dict = {tf_train_dataset : batch_data, tf_train_labels : batch_labels}
  		_, l, predictions = session.run([optimizer, loss, train_prediction], feed_dict=feed_dict)
- 		if (step % 1 == 0):
+ 		if (step % 100 == 0):
  			print('Minibatch loss at step %d: %f' % (step, l))
  			print('Minibatch MSE: %.3f' % MSE(predictions, batch_labels))
  			print('Validation MSE: %.3f' % MSE(valid_prediction.eval(), valid_labels))
