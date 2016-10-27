@@ -46,13 +46,13 @@ def randomize(dataset, labels):
 
 dataset, labels = randomize(dataset, labels)
 
-
+'''
 for i in range(3):
 	index = np.random.randint(dataset.shape[0])
 	plt.plot(dataset[index,:])
 	print('label',labels[index,:])
 	plt.show()
-
+'''
 
 '''Assign Dataset'''
 
@@ -109,7 +109,7 @@ with graph.as_default():
 	test_prediction = tf.nn.softmax(model(tf_test_dataset))
 
 start_time = time.time()
-nm_steps = 200000
+nm_steps = 70000
 with tf.Session(graph=graph) as session:
  	tf.initialize_all_variables().run()
  	print('Initialized')
@@ -134,3 +134,29 @@ with tf.Session(graph=graph) as session:
  		print('Ground truth label: (%.1f, %.1f)' % (label.tolist()[0],label.tolist()[1]))
  		prd = tf.nn.softmax(model(test_dataset[i_test,:].reshape(1,25))).eval()
  		print('Predicted label: (%.2f, %.2f)' % (prd.tolist()[0][0],prd.tolist()[0][1]))
+ 	prd_test = test_prediction.eval()
+ 	prd_index = np.argmax(prd_test,axis=1).reshape(-1,1)
+ 	org_index = np.argmax(test_labels,axis=1).reshape(-1,1)
+ 	index_dict = np.concatenate((prd_index,org_index),axis=1)
+	pos_dic = np.asarray([x==y==0 for (x,y) in index_dict])
+	neg_dic = np.asarray([x==y==1 for (x,y) in index_dict])
+	pos_neg_dic = np.asarray([x==0&y==1 for (x,y) in index_dict])
+	neg_pos_dic = np.asarray([x==1&y==0 for (x,y) in index_dict])
+
+	prd_pos_data = test_dataset[pos_dic]
+	prd_neg_data = test_dataset[neg_dic]
+	pos_neg_data = test_dataset[pos_neg_dic]
+	neg_pos_data = test_dataset[neg_pos_dic]
+
+def save_image(data,name):
+	nm = data.shape[0]
+	for i in range(data.shape[0]):
+		plt.plot(data[i,:])
+		plt.ylim([-0.5,0.5])
+		plt.savefig(name+str(i)+'.png')
+		plt.clf()
+if pos_neg_data.shape[0]!=0:
+	save_image(pos_neg_data,'pos_neg')
+save_image(neg_pos_data,'neg_pos')
+save_image(prd_pos_data,'pos')
+save_image(prd_neg_data,'neg')
