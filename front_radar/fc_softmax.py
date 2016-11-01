@@ -79,7 +79,7 @@ def accuracy(predictions, labels):
 
 '''Build Net'''
 batch_size = 20
-hidden_nm = 10
+hidden_nm = 200
 graph = tf.Graph()
 
 with graph.as_default():
@@ -109,7 +109,7 @@ with graph.as_default():
 	test_prediction = tf.nn.softmax(model(tf_test_dataset))
 
 start_time = time.time()
-nm_steps = 70000
+nm_steps = 200000
 with tf.Session(graph=graph) as session:
  	tf.initialize_all_variables().run()
  	print('Initialized')
