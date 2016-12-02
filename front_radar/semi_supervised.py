@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 Zhiang Chen
-Aug,2016
+Dec,2016
 '''
 
 
@@ -79,8 +79,9 @@ def accuracy(predictions, labels):
 
 '''Build Net'''
 batch_size = 20
-hidden_nm1 = 20
-hidden_nm2 = 10
+hidden1_nm = 30
+hidden2_nm = 6
+hidden3_nm = 10
 graph = tf.Graph()
 
 with graph.as_default():
@@ -90,35 +91,47 @@ with graph.as_default():
 	tf_valid_dataset = tf.constant(valid_dataset)
 	tf_test_dataset = tf.constant(test_dataset)
 
-	weights1 = tf.Variable(tf.truncated_normal([data_dim,hidden_nm1], stddev=1.0))
-	biases1 = tf.Variable(tf.zeros([hidden_nm1]))
+	e_weights1 = tf.Variable(tf.truncated_normal([data_dim,hidden1_nm], stddev=1.0), trainable = False)
+	e_biases1 = tf.Variable(tf.zeros([hidden1_nm]), trainable = False)
+	e_weights2 = tf.Variable(tf.truncated_normal([hidden1_nm,hidden2_nm], stddev=1.0), trainable = False)
+	e_biases2 = tf.Variable(tf.zeros([hidden2_nm]), trainable = False)
 
-	weights2 = tf.Variable(tf.truncated_normal([hidden_nm1,hidden_nm2], stddev=1.0))
-	biases2 = tf.Variable(tf.zeros([hidden_nm2]))
+	d_weights1 = tf.Variable(tf.truncated_normal([hidden2_nm,hidden1_nm], stddev=1.0))
+	d_biases1 = tf.Variable(tf.zeros([hidden1_nm]))
+	d_weights2 = tf.Variable(tf.truncated_normal([hidden1_nm,data_dim], stddev=1.0))
+	d_biases2 = tf.Variable(tf.zeros([data_dim]))
 
-	weights3 = tf.Variable(tf.truncated_normal([hidden_nm2,2], stddev=1.0))
-	biases3 = tf.Variable(tf.zeros([2]))
+	weights1 = tf.Variable(tf.truncated_normal([hidden2_nm,hidden3_nm], stddev=1.0))
+	biases1 = tf.Variable(tf.zeros([hidden3_nm]))
+
+	weights2 = tf.Variable(tf.truncated_normal([hidden3_nm,2], stddev=1.0))
+	biases2 = tf.Variable(tf.zeros([2]))
+	saver = tf.train.Saver()
+
 
 	def model(data):
-		hidden_in = tf.matmul(data, weights1) + biases1
-		hidden_out = tf.nn.relu(hidden_in)
-		hidden_in = tf.matmul(hidden_out,weights2) + biases2
-		hidden_out = tf.nn.relu(hidden_in)
-		o = tf.matmul(hidden_out,weights3) + biases3
+		hidden_in = tf.matmul(data, e_weights1) + e_biases1
+		hidden_out = tf.nn.sigmoid(hidden_in)
+		hidden_in = tf.matmul(hidden_out, e_weights2) + e_biases2
+		representation = tf.nn.sigmoid(hidden_in)
+
+		hidden_in = tf.matmul(representation, weights1) + biases1
+		hidden_out = tf.nn.sigmoid(hidden_in)
+		o = tf.matmul(hidden_out, weights2) + biases2
 		return o
 
 	logits = model(tf_train_dataset)
 	loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, tf_train_labels))
-	optimizer = tf.train.GradientDescentOptimizer(0.002).minimize(loss)
+	optimizer = tf.train.GradientDescentOptimizer(0.01).minimize(loss)
 
 	train_prediction = tf.nn.softmax(logits)
 	valid_prediction = tf.nn.softmax(model(tf_valid_dataset))
 	test_prediction = tf.nn.softmax(model(tf_test_dataset))
 
 start_time = time.time()
-nm_steps = 2000000
+nm_steps = 400000
 with tf.Session(graph=graph) as session:
- 	tf.initialize_all_variables().run()
+ 	saver.restore(session, "autoencoder.ckpt")
  	print('Initialized')
  	for step in range(nm_steps):
  		offset = (step * batch_size) % (train_labels.shape[0] - batch_size)
@@ -135,6 +148,8 @@ with tf.Session(graph=graph) as session:
  	end_time = time.time()
 	duration = (end_time - start_time)/60
 	print("Excution time: %0.2fmin" % duration)
+'''
+
  	i_test = 0
  	for i_test in np.random.randint(test_dataset.shape[0],size=5).tolist():
  		label = test_labels[int(i_test),:]
@@ -168,3 +183,4 @@ if pos_neg_data.shape[0]!=0:
 #save_image(neg_pos_data,'neg_pos')
 #save_image(prd_pos_data,'pos')
 #save_image(prd_neg_data,'neg')
+'''
