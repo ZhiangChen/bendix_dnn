@@ -79,9 +79,10 @@ def accuracy(predictions, labels):
 
 '''Build Net'''
 batch_size = 20
-hidden1_nm = 30
-hidden2_nm = 6
+hidden1_nm = 15
+hidden2_nm = 3
 hidden3_nm = 10
+hidden_nm_r = 3
 graph = tf.Graph()
 
 with graph.as_default():
@@ -91,29 +92,43 @@ with graph.as_default():
 	tf_valid_dataset = tf.constant(valid_dataset)
 	tf_test_dataset = tf.constant(test_dataset)
 
-	e_weights1 = tf.Variable(tf.truncated_normal([data_dim,hidden1_nm], stddev=1.0), trainable = False)
-	e_biases1 = tf.Variable(tf.zeros([hidden1_nm]), trainable = False)
-	e_weights2 = tf.Variable(tf.truncated_normal([hidden1_nm,hidden2_nm], stddev=1.0), trainable = False)
-	e_biases2 = tf.Variable(tf.zeros([hidden2_nm]), trainable = False)
+	e_weights1 = tf.Variable(tf.truncated_normal([20,hidden1_nm], stddev=1.0))
+	e_biases1 = tf.Variable(tf.zeros([hidden1_nm]))
+	e_weights2 = tf.Variable(tf.truncated_normal([hidden1_nm,hidden2_nm], stddev=1.0))
+	e_biases2 = tf.Variable(tf.zeros([hidden2_nm]))
 
 	d_weights1 = tf.Variable(tf.truncated_normal([hidden2_nm,hidden1_nm], stddev=1.0))
 	d_biases1 = tf.Variable(tf.zeros([hidden1_nm]))
-	d_weights2 = tf.Variable(tf.truncated_normal([hidden1_nm,data_dim], stddev=1.0))
-	d_biases2 = tf.Variable(tf.zeros([data_dim]))
+	d_weights2 = tf.Variable(tf.truncated_normal([hidden1_nm,20], stddev=1.0))
+	d_biases2 = tf.Variable(tf.zeros([20]))
 
-	weights1 = tf.Variable(tf.truncated_normal([hidden2_nm,hidden3_nm], stddev=1.0))
+	e_weights1_r = tf.Variable(tf.truncated_normal([5,hidden_nm_r], stddev=1.0))
+	e_biases1_r = tf.Variable(tf.zeros([hidden_nm_r]))
+
+	d_weights1_r = tf.Variable(tf.truncated_normal([hidden_nm_r,5], stddev=1.0))
+	d_biases1_r = tf.Variable(tf.zeros([5]))
+
+	weights1 = tf.Variable(tf.truncated_normal([hidden2_nm*2,hidden3_nm], stddev=1.0))
 	biases1 = tf.Variable(tf.zeros([hidden3_nm]))
 
 	weights2 = tf.Variable(tf.truncated_normal([hidden3_nm,2], stddev=1.0))
 	biases2 = tf.Variable(tf.zeros([2]))
+
+	global_step = tf.Variable(0)  # count the number of steps taken.
 	saver = tf.train.Saver()
 
 
 	def model(data):
-		hidden_in = tf.matmul(data, e_weights1) + e_biases1
+		data_f, data_r = data[:,:20], data[:,20:]
+		hidden_in = tf.matmul(data_f, e_weights1) + e_biases1
 		hidden_out = tf.nn.sigmoid(hidden_in)
 		hidden_in = tf.matmul(hidden_out, e_weights2) + e_biases2
-		representation = tf.nn.sigmoid(hidden_in)
+		representation_f = tf.nn.sigmoid(hidden_in)
+
+		hidden_in = tf.matmul(data_r, e_weights1_r) + e_biases1_r
+		representation_r = tf.nn.sigmoid(hidden_in)
+
+		representation = tf.concat(1,[representation_f, representation_r])
 
 		hidden_in = tf.matmul(representation, weights1) + biases1
 		hidden_out = tf.nn.sigmoid(hidden_in)
@@ -122,14 +137,16 @@ with graph.as_default():
 
 	logits = model(tf_train_dataset)
 	loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, tf_train_labels))
-	optimizer = tf.train.GradientDescentOptimizer(0.01).minimize(loss)
+	#optimizer = tf.train.GradientDescentOptimizer(0.01).minimize(loss)
+	learning_rate = tf.train.exponential_decay(0.01, global_step, 100000, 0.8, staircase=True)
+	optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=global_step)
 
 	train_prediction = tf.nn.softmax(logits)
 	valid_prediction = tf.nn.softmax(model(tf_valid_dataset))
 	test_prediction = tf.nn.softmax(model(tf_test_dataset))
 
 start_time = time.time()
-nm_steps = 400000
+nm_steps = 2000000
 with tf.Session(graph=graph) as session:
  	saver.restore(session, "autoencoder.ckpt")
  	print('Initialized')
@@ -138,9 +155,10 @@ with tf.Session(graph=graph) as session:
  		batch_data = train_dataset[offset:(offset + batch_size), :]
  		batch_labels = train_labels[offset:(offset + batch_size), :]
  		feed_dict = {tf_train_dataset : batch_data, tf_train_labels : batch_labels}
- 		_, l, predictions = session.run([optimizer, loss, train_prediction], feed_dict=feed_dict)
+ 		lr,_, l, predictions = session.run([learning_rate,optimizer, loss, train_prediction], feed_dict=feed_dict)
  		if (step % 5000 == 0):
  			print('*'*40)
+ 			print('learning rate: %f'%lr)
  			print('Minibatch loss at step %d: %f' % (step, l))
  			print('Minibatch accuracy: %.1f%%' % accuracy(predictions, batch_labels))
  			print('Validation accuracy: %.1f%%' % accuracy(valid_prediction.eval(), valid_labels))

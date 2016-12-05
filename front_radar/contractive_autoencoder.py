@@ -57,8 +57,8 @@ for i in range(3):
 '''Assign Dataset'''
 
 data_nm = dataset.shape[0]
-train_dataset = dataset[0:int(0.6*data_nm),:].astype(np.float32)
-train_labels = labels[0:int(0.6*data_nm),:].astype(np.float32)
+train_dataset = dataset[0:int(0.9*data_nm),:].astype(np.float32)
+train_labels = labels[0:int(0.9*data_nm),:].astype(np.float32)
 valid_dataset = dataset[int(0.6*data_nm):int(0.8*data_nm),:].astype(np.float32)
 valid_labels = labels[int(0.6*data_nm):int(0.8*data_nm),:].astype(np.float32)
 test_dataset =  dataset[int(0.8*data_nm):,:].astype(np.float32)
@@ -79,9 +79,10 @@ def accuracy(predictions, labels):
 
 '''Build Net'''
 batch_size = 20
-hidden1_nm = 30
-hidden2_nm = 6
+hidden1_nm = 15
+hidden2_nm = 3
 hidden3_nm = 10
+hidden_nm_r = 3
 graph = tf.Graph()
 
 with graph.as_default():
@@ -90,42 +91,57 @@ with graph.as_default():
 	tf_valid_dataset = tf.constant(valid_dataset)
 	tf_test_dataset = tf.constant(test_dataset)
 
-	e_weights1 = tf.Variable(tf.truncated_normal([data_dim,hidden1_nm], stddev=1.0))
+	e_weights1 = tf.Variable(tf.truncated_normal([20,hidden1_nm], stddev=1.0))
 	e_biases1 = tf.Variable(tf.zeros([hidden1_nm]))
 	e_weights2 = tf.Variable(tf.truncated_normal([hidden1_nm,hidden2_nm], stddev=1.0))
 	e_biases2 = tf.Variable(tf.zeros([hidden2_nm]))
 
 	d_weights1 = tf.Variable(tf.truncated_normal([hidden2_nm,hidden1_nm], stddev=1.0))
 	d_biases1 = tf.Variable(tf.zeros([hidden1_nm]))
-	d_weights2 = tf.Variable(tf.truncated_normal([hidden1_nm,data_dim], stddev=1.0))
-	d_biases2 = tf.Variable(tf.zeros([data_dim]))
+	d_weights2 = tf.Variable(tf.truncated_normal([hidden1_nm,20], stddev=1.0))
+	d_biases2 = tf.Variable(tf.zeros([20]))
 
-	weights1 = tf.Variable(tf.truncated_normal([hidden2_nm,hidden3_nm], stddev=1.0))
+	e_weights1_r = tf.Variable(tf.truncated_normal([5,hidden_nm_r], stddev=1.0))
+	e_biases1_r = tf.Variable(tf.zeros([hidden_nm_r]))
+
+	d_weights1_r = tf.Variable(tf.truncated_normal([hidden_nm_r,5], stddev=1.0))
+	d_biases1_r = tf.Variable(tf.zeros([5]))
+
+	weights1 = tf.Variable(tf.truncated_normal([hidden2_nm*2,hidden3_nm], stddev=1.0))
 	biases1 = tf.Variable(tf.zeros([hidden3_nm]))
 
 	weights2 = tf.Variable(tf.truncated_normal([hidden3_nm,2], stddev=1.0))
 	biases2 = tf.Variable(tf.zeros([2]))
 
+	global_step = tf.Variable(0)  # count the number of steps taken.
 	saver = tf.train.Saver()
 
 
-	def encoder(data):
-		hidden_in = tf.matmul(data, e_weights1) + e_biases1
+	def encoder(data_f, data_r):
+		hidden_in = tf.matmul(data_f, e_weights1) + e_biases1
 		hidden_out = tf.nn.sigmoid(hidden_in)
 		hidden_in = tf.matmul(hidden_out, e_weights2) + e_biases2
-		hidden_out = tf.nn.sigmoid(hidden_in)
-	  	return hidden_out
+		hidden_out_f = tf.nn.sigmoid(hidden_in)
 
-	def decoder(data):
-		hidden_in = tf.matmul(data, d_weights1) + d_biases1
+		hidden_in = tf.matmul(data_r, e_weights1_r) + e_biases1_r
+		hidden_out_r = tf.nn.sigmoid(hidden_in)
+	  	return hidden_out_f, hidden_out_r
+
+	def decoder(data_f, data_r):
+		hidden_in = tf.matmul(data_f, d_weights1) + d_biases1
 		hidden_out = tf.nn.sigmoid(hidden_in)
 		hidden_in = tf.matmul(hidden_out, d_weights2) + d_biases2
-		hidden_out = hidden_in
-		return hidden_out
+		hidden_out_f = hidden_in
+
+		hidden_in = tf.matmul(data_r, d_weights1_r) + d_biases1_r
+		hidden_out_r = hidden_in
+		return hidden_out_f, hidden_out_r
 
 	def reconstruction(data):
-		representation = encoder(data)
-		pred_data = decoder(representation)
+		data_f, data_r = data[:,:20], data[:,20:]
+		representation_f, representation_r = encoder(data_f,data_r)
+		pred_data_f, pred_data_r = decoder(representation_f, representation_r)
+		pred_data = tf.concat(1,[pred_data_f,pred_data_r])
 		return pred_data
 
 	cost = tf.reduce_mean(tf.pow(tf_train_dataset - reconstruction(tf_train_dataset), 2))
@@ -135,7 +151,7 @@ with graph.as_default():
 	test_prediction = reconstruction(tf_test_dataset)
 
 start_time = time.time()
-nm_steps = 10000
+nm_steps = 15000
 with tf.Session(graph=graph) as session:
  	tf.initialize_all_variables().run()
  	print('Initialized')

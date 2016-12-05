@@ -6,7 +6,7 @@ from scale_data import Scaler
 from six.moves import cPickle as pickle
 import os
 
-pos_data, neg_data, dt = Simulator().get_data(100)
+pos_data, neg_data, dt = Simulator().get_data(500)
 sc = Scaler()
 scaled_pos_data = sc.scale_data(pos_data)
 scaled_neg_data = sc.scale_data(neg_data)

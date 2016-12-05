@@ -80,7 +80,7 @@ def accuracy(predictions, labels):
 '''Build Net'''
 batch_size = 20
 hidden1_nm = 30
-hidden2_nm = 6
+hidden2_nm = 40
 hidden3_nm = 10
 graph = tf.Graph()
 
